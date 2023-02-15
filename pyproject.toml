@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "apsched"
+version = "0.1.0"
+description = "test app to play around with APScheduler"
+authors = ["Goncharov Kirill <Kirill.Goncharov@infotecs.ru>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+dramatiq = {extras = ["rabbitmq"], version = "^1.13.0"}
+APScheduler = {extras = ["sqlalchemy"], version = "^3.9.1"}
+dynaconf = "^3.1.11"
+psycopg2 = "^2.9.5"
+rpyc = "^5.3.0"
+fastapi = "^0.89.1"
+dependency-injector = "^4.41.0"
+uvicorn = {extras = ["standard"], version = "^0.20.0"}
+requests = "^2.28.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+mypy = "^0.991"
+black = "^22.10.0"
+types-requests = "^2.28.11"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
