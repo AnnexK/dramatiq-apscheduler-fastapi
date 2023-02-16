@@ -1,0 +1,8 @@
+scheduler:
+  jobstore:
+    sql:
+      url: postgresql+psycopg2://postgres:postgres@localhost:5432/SchedulerDB
+  broker:
+    rmq:
+      url: amqp://admin:admin@localhost:5672
+    queue_name: TaskQueue

@@ -1,0 +1,291 @@
+openapi: 3.0.2
+info:
+  title: Scheduler Service
+  version: "1.0"
+
+paths:
+  /api/v1/jobs:
+    get:
+      summary: Получить информацию о запланированных задачах
+      tags: ["Job"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+    post:
+      summary: Запланировать новую задачу
+      tags: ["Job"]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddJobRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "409":
+          description: Задача с данным идентификатором уже существует
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/jobs/{jobId}:
+    parameters:
+      - $ref: "#/components/parameters/jobId"
+    get:
+      summary: Получить информацию о задаче по ID
+      tags: ["Job"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: Задача не найдена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Снять задачу с планирования
+      tags: ["Job"]
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Задача не найдена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/jobs/{jobId}/force:
+    parameters:
+      - $ref: "#/components/parameters/jobId"
+    post:
+      summary: Запустить задачу на исполнение вне расписания
+      tags: ["Job"]
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Задача не найдена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  parameters:
+    jobId:
+      name: jobId
+      in: path
+      required: true
+      description: Идентификатор задачи
+      schema:
+        $ref: "#components/schemas/Job/properties/id"
+  schemas:
+    Job:
+      type: object
+      description: Запланированная задача
+      required:
+        - id
+        - func
+        - name
+        - args
+        - kwargs
+        - trigger
+        - nextRunTime
+        - expiryTime
+      properties:
+        id:
+          type: string
+          description: Идентификатор задачи
+          example: 167e8093c03b455a849f9acb48fcbf7f
+        func:
+          type: string
+          description: Классификатор функции, вызываемой планировщиком
+          example: r702_notifications.notifications.instant.report_approved_notification:ReportApprovedNotification.send
+        name:
+          type: string
+          description: Имя задачи
+          example: Report approved notification
+        args:
+          type: array
+          description: Неключевые аргументы задачи
+          items: {}
+        kwargs:
+          description: Ключевые аргументы задачи
+          type: object
+        trigger:
+          description: Расписание задачи
+          $ref: "#/components/schemas/Trigger"
+        nextRunTime:
+          description: Время следующего запуска задачи
+          type: string
+          format: date-time
+        expiryTime:
+          type: string
+          format: date-time
+          description: Дата и время, после которой задача автоматически снимается с планирования, или null, если автоматическое снятие задачи не требуется
+          nullable: true
+    Trigger:
+      type: object
+      description: Объект расписания
+      oneOf:
+        - $ref: "#/components/schemas/CronTrigger"
+        - $ref: "#/components/schemas/IntervalTrigger"
+      discriminator:
+        propertyName: type
+        mapping:
+          cron: "#/components/schemas/CronTrigger"
+          interval: "#/components/schemas/IntervalTrigger"
+    BaseTrigger:
+      type: object
+      description: Базовая часть объекта расписания
+      required:
+        - type
+      properties:
+        type:
+          $ref: "#/components/schemas/TriggerType"
+        timezone:
+          type: string
+          description: Часовой пояс расписания
+          example: Europe/Moscow
+      discriminator:
+        propertyName: type
+    TriggerType:
+      type: string
+      description: Перечисление типов расписаний
+      enum:
+        - cron
+        - interval
+    CronTrigger:
+      type: object
+      description: Расписание типа Crontab
+      allOf:
+        - $ref: "#/components/schemas/BaseTrigger"
+        - $ref: "#/components/schemas/CronTriggerPart"
+    CronTriggerPart:
+      type: object
+      description: Часть расписания, специфичная для расписания типа Crontab
+      properties:
+        minute:
+          type: string
+          description: Спецификатор минут для Crontab
+          example: "*"
+          default: "*"
+        hour:
+          type: string
+          description: Спецификатор часов для Crontab
+          example: "*"
+          default: "*"
+        dayOfMonth:
+          type: string
+          description: Спецификатор дней месяца для Crontab
+          example: "*"
+          default: "*"
+        month:
+          type: string
+          description: Спецификатор месяцев для Crontab
+          example: "*"
+          default: "*"
+        dayOfWeek:
+          type: string
+          description: Спецификатор дней недели для Crontab
+          example: "*"
+          default: "*"
+    IntervalTrigger:
+      type: object
+      description: Расписание типа интервал
+      allOf:
+        - $ref: "#/components/schemas/BaseTrigger"
+        - $ref: "#/components/schemas/IntervalTriggerPart"
+    IntervalTriggerPart:
+      type: object
+      description: Часть расписания, специфичная для расписания типа интервал
+      properties:
+        weeks:
+          type: integer
+          description: Количество недель в интервале
+          example: 1
+          default: 0
+        days:
+          type: integer
+          description: Количество дней в интервале
+          example: 1
+          default: 0
+        hours:
+          type: integer
+          description: Количество часов в интервале
+          example: 1
+          default: 0
+        minutes:
+          type: integer
+          description: Количество минут в интервале
+          example: 1
+          default: 0
+        seconds:
+          type: integer
+          description: Количество секунд в интервале
+          example: 1
+          default: 0
+    AddJobRequest:
+      type: object
+      description: Запрос на планирование задачи
+      required:
+        - id
+        - func
+        - name
+        - args
+        - kwargs
+        - trigger
+      properties:
+        id:
+          type: string
+          description: Идентификатор задачи
+          example: 167e8093c03b455a849f9acb48fcbf7f
+        func:
+          type: string
+          description: Классификатор функции, вызываемой планировщиком
+          example: r702_notifications.notifications.instant.report_approved_notification:ReportApprovedNotification.send
+        name:
+          type: string
+          description: Имя задачи
+          example: Report approved notification
+        args:
+          type: array
+          description: Неключевые аргументы задачи
+          items: {}
+        kwargs:
+          description: Ключевые аргументы задачи
+          type: object
+        trigger:
+          description: Расписание задачи
+          $ref: "#/components/schemas/Trigger"
+        expiryTime:
+          type: string
+          format: date-time
+          description: Дата и время, после которой задача автоматически снимается с планирования, или null, если автоматическое снятие задачи не требуется
+          nullable: true
+          default: null
+    Error:
+      type: object
+      description: Ошибка при обработке запроса
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Описание ошибки
+          example: Job with id 167e8093c03b455a849f9acb48fcbf7f not found.
